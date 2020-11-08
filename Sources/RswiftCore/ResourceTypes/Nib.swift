@@ -26,6 +26,7 @@ struct Nib: WhiteListedExtensionsResourceType, ReusableContainer {
   let usedImageIdentifiers: [NameCatalog]
   let usedColorResources: [NameCatalog]
   let usedAccessibilityIdentifiers: [String]
+  let deploymentVersion: String?
 
   init(url: URL) throws {
     try Nib.throwIfUnsupportedExtension(url.pathExtension)
@@ -51,6 +52,9 @@ struct Nib: WhiteListedExtensionsResourceType, ReusableContainer {
     usedImageIdentifiers = parserDelegate.usedImageIdentifiers
     usedColorResources = parserDelegate.usedColorReferences
     usedAccessibilityIdentifiers = parserDelegate.usedAccessibilityIdentifiers
+    deploymentVersion = parseDeploymentVersion(parserDelegate.deploymentVersions) {
+      warn("Nib \(filename) contains multiple deployment versions. Unknown how to parse, ignoring all.")
+    }
   }
 }
 
@@ -61,6 +65,7 @@ internal class NibParserDelegate: NSObject, XMLParserDelegate {
   var usedImageIdentifiers: [NameCatalog] = []
   var usedColorReferences: [NameCatalog] = []
   var usedAccessibilityIdentifiers: [String] = []
+  var deploymentVersions: [String] = []
 
   // State
   var isObjectsTagOpened = false;
@@ -88,6 +93,11 @@ internal class NibParserDelegate: NSObject, XMLParserDelegate {
     case "accessibility":
       if let accessibilityIdentifier = attributeDict["identifier"] {
         usedAccessibilityIdentifiers.append(accessibilityIdentifier)
+      }
+
+    case "deployment":
+      if let version = attributeDict["version"] {
+        deploymentVersions.append(version)
       }
 
     case "userDefinedRuntimeAttribute":
@@ -146,3 +156,83 @@ internal class NibParserDelegate: NSObject, XMLParserDelegate {
     return Reusable(identifier: reuseIdentifier, type: type)
   }
 }
+
+func parseDeploymentVersion(_ inputs: [String], multipleWarning: () -> Void) -> String? {
+  if inputs.count > 1 {
+    multipleWarning()
+    return nil
+  }
+
+  guard let str = inputs.first, let version = Int(str) else { return nil }
+
+  return deploymentVersions[version]
+}
+
+
+// See: https://github.com/mac-cain13/R.swift/issues/511#issuecomment-505867273
+// We could write code for this, instead of this hardcoded table. Or not...
+private let deploymentVersions: [Int: String] = [
+  0x700: "7.0",
+  0x710: "7.1",
+
+  0x800: "8.0",
+  0x810: "8.1",
+  0x830: "8.2",
+  0x820: "8.3",
+
+  0x900: "9.0",
+  0x910: "9.1",
+  0x930: "9.2",
+  0x920: "9.3",
+
+  0x1000: "10.0",
+  0x1010: "10.1",
+  0x1030: "10.2",
+  0x1020: "10.3",
+
+  0x1100: "11.0",
+  0x1110: "11.1",
+  0x1130: "11.2",
+  0x1120: "11.3",
+
+  0x1200: "12.0",
+  0x1210: "12.1",
+  0x1230: "12.2",
+  0x1220: "12.3",
+
+  0x1300: "13.0",
+  0x1310: "13.1",
+  0x1330: "13.2",
+  0x1320: "13.3",
+
+  // Future proofing below...
+  0x1400: "14.0",
+  0x1410: "14.1",
+  0x1430: "14.2",
+  0x1420: "14.3",
+
+  0x1500: "15.0",
+  0x1510: "15.1",
+  0x1530: "15.2",
+  0x1520: "15.3",
+
+  0x1600: "16.0",
+  0x1610: "16.1",
+  0x1630: "16.2",
+  0x1620: "16.3",
+
+  0x1700: "17.0",
+  0x1710: "17.1",
+  0x1730: "17.2",
+  0x1720: "17.3",
+
+  0x1800: "18.0",
+  0x1810: "18.1",
+  0x1830: "18.2",
+  0x1820: "18.3",
+
+  0x1900: "19.0",
+  0x1910: "19.1",
+  0x1930: "19.2",
+  0x1920: "19.3",
+]

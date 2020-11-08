@@ -33,6 +33,7 @@ struct Storyboard: WhiteListedExtensionsResourceType, ReusableContainer {
   let usedImageIdentifiers: [NameCatalog]
   let usedColorResources: [NameCatalog]
   let reusables: [Reusable]
+  let deploymentVersion: String?
 
   var initialViewController: ViewController? {
     return viewControllers
@@ -66,6 +67,9 @@ struct Storyboard: WhiteListedExtensionsResourceType, ReusableContainer {
     usedImageIdentifiers = parserDelegate.usedImageIdentifiers
     usedColorResources = parserDelegate.usedColorReferences
     reusables = parserDelegate.reusables
+    deploymentVersion = parseDeploymentVersion(parserDelegate.deploymentVersions) {
+      warn("Storyboard \(filename) contains multiple deployment versions. Unknown how to parse, ignoring all.")
+    }
   }
 
   struct ViewController {
@@ -132,6 +136,7 @@ private class StoryboardParserDelegate: NSObject, XMLParserDelegate {
   var usedColorReferences: [NameCatalog] = []
   var usedAccessibilityIdentifiers: [String] = []
   var reusables: [Reusable] = []
+  var deploymentVersions: [String] = []
 
   // State
   var currentViewController: Storyboard.ViewController?
@@ -194,6 +199,11 @@ private class StoryboardParserDelegate: NSObject, XMLParserDelegate {
           bundleIdentifier: attributeDict["bundleIdentifier"]
         )
         viewControllerPlaceholders.append(placeholder)
+      }
+
+    case "deployment":
+      if let version = attributeDict["version"] {
+        deploymentVersions.append(version)
       }
 
     default:
@@ -261,4 +271,3 @@ private class StoryboardParserDelegate: NSObject, XMLParserDelegate {
     return Reusable(identifier: reuseIdentifier, type: type)
   }
 }
-
