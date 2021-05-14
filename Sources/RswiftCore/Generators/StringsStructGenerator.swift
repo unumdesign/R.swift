@@ -253,15 +253,18 @@ struct StringsStructGenerator: ExternalOnlyStructGenerator {
       doesThrow: false,
       returnType: Type._String,
       body: """
-        guard let preferredLanguages = preferredLanguages else {
-          return \(values.swiftCode(bundle: "hostingBundle"))
+        let translationKey = "\(values.translationKey())"
+        
+        let translation = \(values.swiftCode(bundle: "hostingBundle"))
+        if translation == translationKey {
+          guard let path = hostingBundle.path(forResource: "en", ofType: "lproj"),
+          let bundle = Bundle(path: path) else {
+            return translationKey
+          }
+          return \(values.swiftCode(bundle: "bundle"))
+        } else {
+          return translation
         }
-
-        guard let (_, bundle) = localeBundle(tableName: "\(values.tableName)", preferredLanguages: preferredLanguages) else {
-          return "\(values.key.escapedStringLiteral)"
-        }
-
-        return \(values.swiftCode(bundle: "bundle"))
         """,
       os: []
     )
@@ -349,6 +352,10 @@ private struct StringValues {
     else {
       return "NSLocalizedString(\"\(escapedKey)\", tableName: \"\(tableName)\", bundle: \(bundle)\(valueArgument), comment: \"\")"
     }
+  }
+    
+  func translationKey() -> String {
+    return key.escapedStringLiteral
   }
 
   var baseLanguageValue: String? {
